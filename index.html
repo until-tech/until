@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>UNTIL — Write something for later.</title>
+
+  <meta name="description" content="Write something for later. Seal a message and let time deliver it.">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: #08090d;
+      color: #f4f0e8;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(
+          circle at 50% 35%,
+          rgba(255,255,255,0.07),
+          transparent 32%
+        ),
+        radial-gradient(
+          circle at 15% 80%,
+          rgba(120,90,55,0.08),
+          transparent 30%
+        );
+    }
+
+    nav {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      padding: 28px 6vw;
+      z-index: 2;
+    }
+
+    .logo {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.42em;
+      color: #ffffff;
+    }
+
+    .nav-note {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #85858b;
+    }
+
+    .hero {
+      min-height: 100vh;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      text-align: center;
+
+      padding: 100px 24px 70px;
+
+      position: relative;
+    }
+
+    .hero-inner {
+      max-width: 820px;
+    }
+
+    .eyebrow {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.35em;
+      color: #9b9182;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: clamp(58px, 11vw, 132px);
+      font-weight: normal;
+      line-height: 0.86;
+      letter-spacing: -0.055em;
+
+      margin: 0 0 34px;
+    }
+
+    .tagline {
+      font-size: clamp(21px, 3vw, 31px);
+      line-height: 1.35;
+
+      color: #c9c3b9;
+
+      font-style: italic;
+
+      margin: 0 auto 46px;
+
+      max-width: 600px;
+    }
+
+    .cta {
+      display: inline-flex;
+
+      align-items: center;
+      justify-content: center;
+
+      padding: 17px 34px;
+
+      border: 1px solid rgba(244,240,232,0.55);
+
+      color: #f4f0e8;
+
+      text-decoration: none;
+
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+
+      transition: 0.3s ease;
+    }
+
+    .cta:hover {
+      background: #f4f0e8;
+      color: #08090d;
+    }
+
+    .scroll {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+
+      transform: translateX(-50%);
+
+      font-family: Arial, sans-serif;
+      font-size: 9px;
+
+      letter-spacing: 0.25em;
+
+      color: #65656b;
+
+      text-transform: uppercase;
+    }
+
+    .section {
+      min-height: 70vh;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 100px 24px;
+
+      border-top: 1px solid rgba(255,255,255,0.07);
+
+      text-align: center;
+    }
+
+    .section-inner {
+      max-width: 720px;
+    }
+
+    .section h2 {
+      font-size: clamp(34px, 5vw, 60px);
+
+      font-weight: normal;
+
+      margin: 0 0 25px;
+
+      letter-spacing: -0.03em;
+    }
+
+    .section p {
+      font-size: 19px;
+
+      line-height: 1.7;
+
+      color: #96949a;
+
+      margin: 0 auto 38px;
+    }
+
+    .steps {
+      display: grid;
+
+      grid-template-columns: repeat(3, 1fr);
+
+      gap: 1px;
+
+      max-width: 900px;
+
+      width: 100%;
+
+      margin-top: 50px;
+
+      background: rgba(255,255,255,0.08);
+    }
+
+    .step {
+      background: #08090d;
+
+      padding: 40px 25px;
+    }
+
+    .number {
+      font-family: Arial, sans-serif;
+
+      font-size: 10px;
+
+      letter-spacing: 0.2em;
+
+      color: #8f8373;
+
+      margin-bottom: 18px;
+    }
+
+    .step h3 {
+      font-size: 23px;
+
+      font-weight: normal;
+
+      margin: 0 0 12px;
+    }
+
+    .step p {
+      font-size: 15px;
+
+      line-height: 1.55;
+
+      margin: 0;
+    }
+
+    footer {
+      padding: 35px 6vw;
+
+      border-top: 1px solid rgba(255,255,255,0.07);
+
+      display: flex;
+
+      justify-content: space-between;
+
+      font-family: Arial, sans-serif;
+
+      font-size: 10px;
+
+      letter-spacing: 0.12em;
+
+      color: #606067;
+    }
+
+    @media (max-width: 650px) {
+
+      nav {
+        padding: 23px 24px;
+      }
+
+      .nav-note {
+        display: none;
+      }
+
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      footer {
+        display: block;
+        line-height: 2;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav>
+
+    <div class="logo">
+      UNTIL
+    </div>
+
+    <div class="nav-note">
+      Some things are meant to wait.
+    </div>
+
+  </nav>
+
+
+  <main>
+
+    <!-- HERO -->
+
+    <section class="hero">
+
+      <div class="hero-inner">
+
+        <div class="eyebrow">
+          A message for another time
+        </div>
+
+        <h1>
+          UNTIL
+        </h1>
+
+        <p class="tagline">
+          Write something for later.
+        </p>
+
+        <a class="cta" href="#how">
+          Enter the future
+        </a>
+
+      </div>
+
+      <div class="scroll">
+        Scroll slowly ↓
+      </div>
+
+    </section>
+
+
+    <!-- IDEA -->
+
+    <section class="section" id="how">
+
+      <div class="section-inner">
+
+        <div class="eyebrow">
+          The idea
+        </div>
+
+        <h2>
+          Say it now.<br>
+          Read it later.
+        </h2>
+
+        <p>
+          Write a message to yourself, someone you love,
+          or the person you will become. Choose a date.
+          Seal it. Then forget about it.
+          Until.
+        </p>
+
+        <a class="cta" href="#create">
+          Write a message
+        </a>
+
+      </div>
+
+    </section>
+
+
+    <!-- CREATE -->
+
+    <section class="section" id="create">
+
+      <div class="section-inner">
+
+        <div class="eyebrow">
+          Your first message
+        </div>
+
+        <h2>
+          Something worth waiting for.
+        </h2>
+
+        <p>
+          The message-writing experience is coming next.
+          This is the beginning of UNTIL.
+        </p>
+
+        <a
+          class="cta"
+          href="#"
+          onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;"
+        >
+          Back to the beginning
+        </a>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <footer>
+
+    <span>
+      UNTIL
+    </span>
+
+    <span>
+      Write something for later.
+    </span>
+
+  </footer>
+
+</body>
+</html>
