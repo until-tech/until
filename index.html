@@ -496,23 +496,26 @@ form.addEventListener("submit", async function (e) {
   status.textContent = "Sealing your message...";
 
   try {
-    const { data: message, error: messageError } = await supabaseClient
+    // Create the message ID ourselves so we don't need to read
+    // the private message back from Supabase.
+    const messageId = crypto.randomUUID();
+
+    const { error: messageError } = await supabaseClient
       .from("messages")
       .insert({
+        id: messageId,
         recipient_email: recipientEmail,
         message: messageText,
         delivery_date: new Date(deliveryDate).toISOString(),
         status: "scheduled"
-      })
-      .select()
-      .single();
+      });
 
     if (messageError) throw messageError;
 
     const photoPaths = [];
 
     for (const file of photoFiles) {
-      const filePath = `${message.id}/${crypto.randomUUID()}-${file.name}`;
+      const filePath = `${messageId}/${crypto.randomUUID()}-${file.name}`;
 
       const { error: uploadError } = await supabaseClient.storage
         .from("message-photos")
@@ -528,7 +531,7 @@ form.addEventListener("submit", async function (e) {
       .update({
         photo_paths: photoPaths
       })
-      .eq("id", message.id);
+      .eq("id", messageId);
 
     if (updateError) throw updateError;
 
