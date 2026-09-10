@@ -417,5 +417,129 @@
 
   </footer>
 
+  <section id="write-message" style="padding:80px 20px;max-width:700px;margin:auto;">
+  <h2 style="font-size:42px;margin-bottom:15px;">Write something for later.</h2>
+  <p style="opacity:.7;margin-bottom:35px;">
+    Leave a message. Choose when it should be opened.
+  </p>
+
+  <form id="message-form">
+    <input
+      type="email"
+      id="recipient-email"
+      placeholder="Recipient's email"
+      required
+      style="width:100%;padding:16px;margin-bottom:15px;"
+    >
+
+    <textarea
+      id="message-text"
+      placeholder="Write your message..."
+      required
+      rows="8"
+      style="width:100%;padding:16px;margin-bottom:15px;"
+    ></textarea>
+
+    <label style="display:block;margin-bottom:8px;">Open on</label>
+
+    <input
+      type="datetime-local"
+      id="delivery-date"
+      required
+      style="width:100%;padding:16px;margin-bottom:25px;"
+    >
+
+    <label style="display:block;margin-bottom:8px;">
+      Add photos
+    </label>
+
+    <input
+      type="file"
+      id="photos"
+      accept="image/*"
+      multiple
+      style="margin-bottom:25px;"
+    >
+
+    <button
+      type="submit"
+      style="padding:16px 30px;cursor:pointer;"
+    >
+      Seal the message
+    </button>
+
+    <p id="form-status" style="margin-top:20px;"></p>
+  </form>
+</section>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const SUPABASE_URL = "https://fwovjhthpbzjzholrmdu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_PnIji-sogDu0hy_Rm1Os5g_KwIZ_3xJ";
+
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const form = document.getElementById("message-form");
+
+form.addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const status = document.getElementById("form-status");
+  const recipientEmail = document.getElementById("recipient-email").value;
+  const messageText = document.getElementById("message-text").value;
+  const deliveryDate = document.getElementById("delivery-date").value;
+  const photoFiles = document.getElementById("photos").files;
+
+  status.textContent = "Sealing your message...";
+
+  try {
+    const { data: message, error: messageError } = await supabaseClient
+      .from("messages")
+      .insert({
+        recipient_email: recipientEmail,
+        message: messageText,
+        delivery_date: new Date(deliveryDate).toISOString(),
+        status: "scheduled"
+      })
+      .select()
+      .single();
+
+    if (messageError) throw messageError;
+
+    const photoPaths = [];
+
+    for (const file of photoFiles) {
+      const filePath = `${message.id}/${crypto.randomUUID()}-${file.name}`;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from("message-photos")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      photoPaths.push(filePath);
+    }
+
+    const { error: updateError } = await supabaseClient
+      .from("messages")
+      .update({
+        photo_paths: photoPaths
+      })
+      .eq("id", message.id);
+
+    if (updateError) throw updateError;
+
+    status.textContent = "Your message has been sealed. ✦";
+    form.reset();
+
+  } catch (error) {
+    console.error(error);
+    status.textContent = "Something went wrong. Please try again.";
+  }
+});
+</script>
 </body>
 </html>
