@@ -425,6 +425,13 @@
 
   <form id="message-form">
     <input
+  type="email"
+  id="sender-email"
+  placeholder="Your email"
+  required
+  style="width:100%;padding:16px;margin-bottom:15px;"
+>
+    <input
       type="email"
       id="recipient-email"
       placeholder="Recipient's email"
@@ -488,6 +495,7 @@ form.addEventListener("submit", async function (e) {
   e.preventDefault();
 
   const status = document.getElementById("form-status");
+  const senderEmail = document.getElementById("sender-email").value;
   const recipientEmail = document.getElementById("recipient-email").value;
   const messageText = document.getElementById("message-text").value;
   const deliveryDate = document.getElementById("delivery-date").value;
@@ -504,6 +512,7 @@ form.addEventListener("submit", async function (e) {
       .from("messages")
       .insert({
         id: messageId,
+        sender_email: senderEmail,
         recipient_email: recipientEmail,
         message: messageText,
         delivery_date: new Date(deliveryDate).toISOString(),
