@@ -544,8 +544,32 @@ form.addEventListener("submit", async function (e) {
 
     if (updateError) throw updateError;
 
-    status.textContent = "Your message has been sealed. ✦";
-    form.reset();
+    const emailResponse = await fetch(
+  "https://until-email.dr-assal01.workers.dev",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      to: recipientEmail,
+      subject: "Your UNTIL message is sealed",
+      html: `
+        <h2>Your message has been sealed. ✦</h2>
+        <p>Your message will be delivered on:</p>
+        <p><strong>${new Date(deliveryDate).toLocaleString()}</strong></p>
+        <p>Until then, it stays sealed.</p>
+      `
+    })
+  }
+);
+
+if (!emailResponse.ok) {
+  throw new Error("Email service failed.");
+}
+
+status.textContent = "Your message has been sealed. ✦";
+form.reset();
 
   } catch (error) {
     console.error(error);
