@@ -502,11 +502,17 @@ form.addEventListener("submit", async function (e) {
   const photoFiles = document.getElementById("photos").files;
 
   status.textContent = "Sealing your message...";
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+  if (photoFiles.length > 10 || Array.from(photoFiles).some(file => !allowedTypes.has(file.type) || file.size > 5 * 1024 * 1024)) {
+    status.textContent = "Please choose up to 10 JPG, PNG, WebP or GIF photos, each under 5 MB.";
+    return;
+  }
   if (new Date(deliveryDate).getTime() <= Date.now()) {
     status.textContent = "Please choose a future delivery date.";
     return;
   }
 
+  let messageSaved = false;
   try {
     // Create the message ID ourselves so we don't need to read
     // the private message back from Supabase.
@@ -524,6 +530,7 @@ form.addEventListener("submit", async function (e) {
       });
 
     if (messageError) throw messageError;
+    messageSaved = true;
 
     const photoPaths = [];
 
@@ -539,14 +546,13 @@ form.addEventListener("submit", async function (e) {
       photoPaths.push(filePath);
     }
 
-    const { error: updateError } = await supabaseClient
-      .from("messages")
-      .update({
-        photo_paths: photoPaths
-      })
-      .eq("id", messageId);
-
-    if (updateError) throw updateError;
+    if (photoPaths.length) {
+      const { error: updateError } = await supabaseClient
+        .from("messages")
+        .update({ photo_paths: photoPaths })
+        .eq("id", messageId);
+      if (updateError) throw updateError;
+    }
 
     // Scheduling is complete once the database and photo operations succeed.
     // Confirmation email is best-effort and must never invalidate a saved message.
@@ -555,7 +561,9 @@ form.addEventListener("submit", async function (e) {
 
   } catch (error) {
     console.error(error);
-    status.textContent = "Something went wrong. Please try again.";
+    status.textContent = messageSaved
+      ? "Your message was scheduled, but photo processing failed. Please do not resubmit: this could create a duplicate message."
+      : "Something went wrong. Please try again.";
   }
 });
 </script>
