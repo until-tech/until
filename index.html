@@ -502,6 +502,10 @@ form.addEventListener("submit", async function (e) {
   const photoFiles = document.getElementById("photos").files;
 
   status.textContent = "Sealing your message...";
+  if (new Date(deliveryDate).getTime() <= Date.now()) {
+    status.textContent = "Please choose a future delivery date.";
+    return;
+  }
 
   try {
     // Create the message ID ourselves so we don't need to read
@@ -544,32 +548,10 @@ form.addEventListener("submit", async function (e) {
 
     if (updateError) throw updateError;
 
-    const emailResponse = await fetch(
-  "https://until-email.dr-assal01.workers.dev",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      to: senderEmail,
-      subject: "Your UNTIL message is sealed",
-      html: `
-        <h2>Your message has been sealed. ✦</h2>
-        <p>Your message will be delivered on:</p>
-        <p><strong>${new Date(deliveryDate).toLocaleString()}</strong></p>
-        <p>Until then, it stays sealed.</p>
-      `
-    })
-  }
-);
-
-if (!emailResponse.ok) {
-  throw new Error("Email service failed.");
-}
-
-status.textContent = "Your message has been sealed. ✦";
-form.reset();
+    // Scheduling is complete once the database and photo operations succeed.
+    // Confirmation email is best-effort and must never invalidate a saved message.
+    status.textContent = "Your message has been sealed. ✦";
+    form.reset();
 
   } catch (error) {
     console.error(error);
