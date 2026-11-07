@@ -1,0 +1,37 @@
+name: Check UNTIL website JavaScript
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract inline site JavaScript
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.inside = False
+                  self.chunks = []
+              def handle_starttag(self, tag, attrs):
+                  if tag == 'script' and 'src' not in dict(attrs):
+                      self.inside = True
+              def handle_endtag(self, tag):
+                  if tag == 'script':
+                      self.inside = False
+              def handle_data(self, data):
+                  if self.inside:
+                      self.chunks.append(data)
+          parser = Scripts()
+          parser.feed(Path('index.html').read_text())
+          assert parser.chunks, 'No inline script found'
+          Path('/tmp/until-site.js').write_text('\n'.join(parser.chunks))
+          PY
+      - name: Check JavaScript parses
+        run: node --check /tmp/until-site.js

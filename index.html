@@ -362,7 +362,7 @@
           Until.
         </p>
 
-        <a class="cta" href="#create">
+        <a class="cta" href="#write-message">
           Write a message
         </a>
 
@@ -371,36 +371,6 @@
     </section>
 
 
-    <!-- CREATE -->
-
-    <section class="section" id="create">
-
-      <div class="section-inner">
-
-        <div class="eyebrow">
-          Your first message
-        </div>
-
-        <h2>
-          Something worth waiting for.
-        </h2>
-
-        <p>
-          The message-writing experience is coming next.
-          This is the beginning of UNTIL.
-        </p>
-
-        <a
-          class="cta"
-          href="#"
-          onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;"
-        >
-          Back to the beginning
-        </a>
-
-      </div>
-
-    </section>
 
   </main>
 
@@ -423,7 +393,7 @@
     Leave a message. Choose when it should be opened.
   </p>
 
-  <form id="message-form">
+  <form id="message-form" aria-label="Schedule a future message">
     <input
   type="email"
   id="sender-email"
@@ -441,6 +411,7 @@
 
     <textarea
       id="message-text"
+      maxlength="10000"
       placeholder="Write your message..."
       required
       rows="8"
@@ -463,7 +434,7 @@
     <input
       type="file"
       id="photos"
-      accept="image/*"
+      accept="image/jpeg,image/png,image/webp,image/gif"
       multiple
       style="margin-bottom:25px;"
     >
@@ -475,7 +446,7 @@
       Seal the message
     </button>
 
-    <p id="form-status" style="margin-top:20px;"></p>
+    <p id="form-status" role="status" aria-live="polite" style="margin-top:20px;"></p>
   </form>
 </section>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -502,11 +473,38 @@ form.addEventListener("submit", async function (e) {
   const photoFiles = document.getElementById("photos").files;
 
   status.textContent = "Sealing your message...";
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+  if (photoFiles.length > 10 || Array.from(photoFiles).some(file => !allowedTypes.has(file.type) || file.size > 5 * 1024 * 1024)) {
+    status.textContent = "Please choose up to 10 JPG, PNG, WebP or GIF photos, each under 5 MB.";
+    return;
+  }
+  if (messageText.length > 10000) {
+    status.textContent = "Messages must be 10,000 characters or fewer.";
+    return;
+  }
+  if (!Number.isFinite(new Date(deliveryDate).getTime()) || new Date(deliveryDate).getTime() <= Date.now()) {
+    status.textContent = "Please choose a future delivery date.";
+    return;
+  }
+
+  // Upload photos first. Only insert the scheduled message after every
+  // attachment succeeds, so a failed upload cannot schedule a partial message.
+  const messageId = crypto.randomUUID();
+  const uploadedPaths = [];
+  const submitButton = form.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
 
   try {
-    // Create the message ID ourselves so we don't need to read
-    // the private message back from Supabase.
-    const messageId = crypto.randomUUID();
+    for (const file of photoFiles) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
+      const filePath = `${messageId}/${crypto.randomUUID()}-${safeName}`;
+      const { error: uploadError } = await supabaseClient.storage
+        .from("message-photos")
+        .upload(filePath, file, { contentType: file.type, upsert: false });
+
+      if (uploadError) throw uploadError;
+      uploadedPaths.push(filePath);
+    }
 
     const { error: messageError } = await supabaseClient
       .from("messages")
@@ -516,64 +514,21 @@ form.addEventListener("submit", async function (e) {
         recipient_email: recipientEmail,
         message: messageText,
         delivery_date: new Date(deliveryDate).toISOString(),
-        status: "scheduled"
+        status: "scheduled",
+        photo_paths: uploadedPaths
       });
 
     if (messageError) throw messageError;
 
-    const photoPaths = [];
-
-    for (const file of photoFiles) {
-      const filePath = `${messageId}/${crypto.randomUUID()}-${file.name}`;
-
-      const { error: uploadError } = await supabaseClient.storage
-        .from("message-photos")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      photoPaths.push(filePath);
-    }
-
-    const { error: updateError } = await supabaseClient
-      .from("messages")
-      .update({
-        photo_paths: photoPaths
-      })
-      .eq("id", messageId);
-
-    if (updateError) throw updateError;
-
-    const emailResponse = await fetch(
-  "https://until-email.dr-assal01.workers.dev",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      to: senderEmail,
-      subject: "Your UNTIL message is sealed",
-      html: `
-        <h2>Your message has been sealed. ✦</h2>
-        <p>Your message will be delivered on:</p>
-        <p><strong>${new Date(deliveryDate).toLocaleString()}</strong></p>
-        <p>Until then, it stays sealed.</p>
-      `
-    })
-  }
-);
-
-if (!emailResponse.ok) {
-  throw new Error("Email service failed.");
-}
-
-status.textContent = "Your message has been sealed. ✦";
-form.reset();
-
+    status.textContent = "Your message has been sealed. ✦";
+    form.reset();
   } catch (error) {
-    console.error(error);
-    status.textContent = "Something went wrong. Please try again.";
+    console.error("UNTIL scheduling failed:", error);
+    status.textContent = "The message could not be scheduled. Please try again.";
+    // Some photos may remain in private storage if the database insert failed.
+    // They are not linked to a scheduled message and cannot be publicly viewed.
+  } finally {
+    submitButton.disabled = false;
   }
 });
 </script>
