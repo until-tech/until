@@ -512,11 +512,24 @@ form.addEventListener("submit", async function (e) {
     return;
   }
 
-  let messageSaved = false;
+  // Upload photos first. Only insert the scheduled message after every
+  // attachment succeeds, so a failed upload cannot schedule a partial message.
+  const messageId = crypto.randomUUID();
+  const uploadedPaths = [];
+  const submitButton = form.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+
   try {
-    // Create the message ID ourselves so we don't need to read
-    // the private message back from Supabase.
-    const messageId = crypto.randomUUID();
+    for (const file of photoFiles) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
+      const filePath = `${messageId}/${crypto.randomUUID()}-${safeName}`;
+      const { error: uploadError } = await supabaseClient.storage
+        .from("message-photos")
+        .upload(filePath, file, { contentType: file.type, upsert: false });
+
+      if (uploadError) throw uploadError;
+      uploadedPaths.push(filePath);
+    }
 
     const { error: messageError } = await supabaseClient
       .from("messages")
@@ -526,44 +539,21 @@ form.addEventListener("submit", async function (e) {
         recipient_email: recipientEmail,
         message: messageText,
         delivery_date: new Date(deliveryDate).toISOString(),
-        status: "scheduled"
+        status: "scheduled",
+        photo_paths: uploadedPaths
       });
 
     if (messageError) throw messageError;
-    messageSaved = true;
 
-    const photoPaths = [];
-
-    for (const file of photoFiles) {
-      const filePath = `${messageId}/${crypto.randomUUID()}-${file.name}`;
-
-      const { error: uploadError } = await supabaseClient.storage
-        .from("message-photos")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      photoPaths.push(filePath);
-    }
-
-    if (photoPaths.length) {
-      const { error: updateError } = await supabaseClient
-        .from("messages")
-        .update({ photo_paths: photoPaths })
-        .eq("id", messageId);
-      if (updateError) throw updateError;
-    }
-
-    // Scheduling is complete once the database and photo operations succeed.
-    // Confirmation email is best-effort and must never invalidate a saved message.
     status.textContent = "Your message has been sealed. ✦";
     form.reset();
-
   } catch (error) {
-    console.error(error);
-    status.textContent = messageSaved
-      ? "Your message was scheduled, but photo processing failed. Please do not resubmit: this could create a duplicate message."
-      : "Something went wrong. Please try again.";
+    console.error("UNTIL scheduling failed:", error);
+    status.textContent = "The message could not be scheduled. Please try again.";
+    // Some photos may remain in private storage if the database insert failed.
+    // They are not linked to a scheduled message and cannot be publicly viewed.
+  } finally {
+    submitButton.disabled = false;
   }
 });
 </script>
